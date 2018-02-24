@@ -189,7 +189,7 @@ class Client {
     if (label.includes(" ")) throw new Error("label may not include spaces: '" + label + "'");
     if (this.commands[label] || this.commandAliases[label]) throw new Error("you already registered a command with label: '" + label + "'");
     this.options = {
-      args: true,
+      args: false,
       aliases: null,
       description: "No description",
       fullDescription: "No description",
