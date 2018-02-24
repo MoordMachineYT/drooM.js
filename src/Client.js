@@ -223,6 +223,9 @@ class Client {
   exit(options) {
     this._client.disconnect(options || {});
   }
+  Register(commandPath, eventPath) {
+    return new Registry(commandPath, eventPath);
+  }
 }
 
 module.exports = Client;
