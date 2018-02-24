@@ -37,7 +37,7 @@ class Registry {
     } catch(err) {
       this.data = "const prefix = require(\"droom.js\").Client.commandOptions.prefix;";
       this.data += "function " + label + "(message) {\n";
-      this.data += "\tlet msg = message.content.split(" ");\n";
+      this.data += "\tlet msg = message.content.split(\" \");\n";
       this.data += "\tlet req = false;\n";
       this.data += "\tfor (i = 0; i < prefix.length; i++) {\n";
       this.data += "\t\tif (msg[0].startsWith(prefix[i])) req = true;\n";

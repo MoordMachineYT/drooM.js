@@ -39,7 +39,9 @@ class Client {
     this.commands = {};
     this.commandAliases = {};
 
-    this.commandAliases.push(this.commandOptions.helpCommandAliases);
+    for (var i of Object.keys(this.commandOptions.helpCommandAliases)) {
+      this.commandAliases[i] = 1;
+    }
 
     if (!~this.commandOptions.helpCommandAliases.indexOf("help")) this.commandOptions.helpCommandAliases.push("help");
 
@@ -66,7 +68,7 @@ class Client {
       } else return;
     });
     if (this.commandOptions.helpCommand) {
-      this.commands[label] = {
+      this.commands.help = {
         aliases: this.commandOptions.helpCommandAliases,
         args: false,
         desciption: "Shows this list",
@@ -193,8 +195,8 @@ class Client {
       fullDescription: "No description",
       guild: true,
       dm: true,
-      usage: this.options.args ? `\`${this.commandOptions.prefix[0] + label} <args>\`` : this.commandOptions.prefix[0] + label;
-      invalidUsage: "You are using this command incorrectly. Try `" + this.commandOptions.prefix[0] + " " + label + "` for more information on this command.",
+      usage: this.options.args ? `\`${this.commandOptions.prefix[0] + label} <args>\`` : this.commandOptions.prefix[0] + label,
+      invalidUsage: "You are using this command incorrectly. Try `" + this.commandOptions.prefix[0] + " " + label + "` for more information on this command."
     }
     if (typeof options === "object") {
       for (var i of Object.keys(options)) {
