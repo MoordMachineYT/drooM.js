@@ -15,5 +15,6 @@
   "bugs": {
     "url": "https://github.com/MoordMachineYT/drooM.js/issues"
   },
-  "homepage": "https://github.com/MoordMachineYT/drooM.js#readme"
+  "homepage": "https://github.com/MoordMachineYT/drooM.js#readme",
+  "dependencies": {}
 }
