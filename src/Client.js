@@ -38,7 +38,16 @@ class Client {
 
     this.commands = {};
     this.commandAliases = {};
+<<<<<<< HEAD
     this.handling = [];
+=======
+
+    for (var i of Object.keys(this.commandOptions.helpCommandAliases)) {
+      this.commandAliases[i] = 1;
+    }
+
+    if (!~this.commandOptions.helpCommandAliases.indexOf("help")) this.commandOptions.helpCommandAliases.push("help");
+>>>>>>> cd0eb17a5c08d782ac52045284daa427689bb6af
 
     if (typeof commandOptions === "object") {
       for (var i of Object.keys(commandOptions)) {
@@ -60,7 +69,11 @@ class Client {
 
     if (this.commandOptions.helpCommand) {
       this.commands.help = {
+<<<<<<< HEAD
         aliases: "No aliases",
+=======
+        aliases: this.commandOptions.helpCommandAliases,
+>>>>>>> cd0eb17a5c08d782ac52045284daa427689bb6af
         args: false,
         description: "Shows this list",
         fullDescription: "Shows a list of commands and information on them",
@@ -150,16 +163,21 @@ class Client {
     if (this.commands[label] || this.commandAliases[label]) throw new Error("you already registered a command with label: '" + label + "'");
     this.args = options.args || false;
     this.options = {
-      args: true,
+      args: false,
       aliases: null,
       description: "No description",
       fullDescription: null,
       guild: true,
       dm: true,
+<<<<<<< HEAD
       req: {},
       usage: this.args ? this.commandOptions.prefix[0] + label +  " <args>" : this.commandOptions.prefix[0] + label,
       invalidUsage: "You are using this command incorrectly. Try `" + this.commandOptions.prefix[0] + "help " + label + "` for more information on this command.",
       invalidPermission: "You don't have permission to use this command."
+=======
+      usage: this.options.args ? `\`${this.commandOptions.prefix[0] + label} <args>\`` : this.commandOptions.prefix[0] + label,
+      invalidUsage: "You are using this command incorrectly. Try `" + this.commandOptions.prefix[0] + " " + label + "` for more information on this command."
+>>>>>>> cd0eb17a5c08d782ac52045284daa427689bb6af
     }
     if (typeof options === "object") {
       for (var i of Object.keys(options)) {

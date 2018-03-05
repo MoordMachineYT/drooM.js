@@ -1,7 +1,7 @@
 {
-  "name": "droom.js",
+  "name": "droom",
   "version": "1.0.0",
-  "description": "A framework built with the Eris library",
+  "description": "",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -10,7 +10,7 @@
     "type": "git",
     "url": "git+https://github.com/MoordMachineYT/drooM.js.git"
   },
-  "author": "MoordMachineYT#1910",
+  "author": "",
   "license": "ISC",
   "bugs": {
     "url": "https://github.com/MoordMachineYT/drooM.js/issues"
