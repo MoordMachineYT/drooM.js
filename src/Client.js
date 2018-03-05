@@ -2,6 +2,7 @@
 const Registry = require("./Registry.js");
 const fs = require("fs");
 const path = require("path");
+const { permissionCheck } = require("./Command.js");
 
 /**
 * Represents the main drooM.js client
@@ -17,7 +18,7 @@ class Client {
   * @arg {String} [commandOptions.owner="An unknown user"] The owner of the bot
   * @arg {Boolean} [commandOptions.helpCommand=true] The default help command to be enabled or disabled
   * @arg {Array<String>} [commandOptions.helpCommandAliases=["help"]] The aliases for the help command if used
-  * @arg {Array<String>} [commandOptions.prefix=["@mention "]] The prefix for the bot
+  * @arg {Array<String>} [commandOptions.prefix=["!"]] The prefix for the bot
   * @arg {Boolean} [commandOptions.ignoreBots=true] Whether to respond to other bots or not
   * @arg {Boolean} [commandOptions.ignoreSelf=true] Whether to respond to the messages sent by this client or not
   * @arg {String} [commandOptions.ready="The bot has started and is ready for use"] Posts this in the console when the bot is ready for use
@@ -29,8 +30,7 @@ class Client {
       name: null,
       owner: "An unknown user",
       helpCommand: true,
-      helpCommandAliases: ["help"],
-      prefix: ["@mention "],
+      prefix: ["!"],
       ignoreBots: true,
       ignoreSelf: true,
       ready: "The bot has started and is ready for use"
@@ -38,10 +38,7 @@ class Client {
 
     this.commands = {};
     this.commandAliases = {};
-
-    this.commandAliases.push(this.commandOptions.helpCommandAliases);
-
-    if (!~this.commandOptions.helpCommandAliases.indexOf("help")) this.commandOptions.helpCommandAliases.push("help");
+    this.handling = [];
 
     if (typeof commandOptions === "object") {
       for (var i of Object.keys(commandOptions)) {
@@ -56,117 +53,82 @@ class Client {
       });
     } else throw new TypeError("prefix type must be an array of strings");
     this._client.on("ready", () => {
-      if (~this.commandOptions.prefix.indexOf("@mention")) {
-        this.commandOptions.prefix.forEach(item => {
-          item = item.replace("@mention", this._client.user.mention);
-        })
-      }
       if (this.commandOptions.ready) {
         console.log(this.commandOptions.ready);
-      } else return;
+      }
     });
-    if (this.commandOptions.helpCommand) {
-      this.commands[label] = {
-        aliases: this.commandOptions.helpCommandAliases,
-        args: false,
-        desciption: "Shows this list",
-        fullDescription: "Shows a list of commands and information on them.",
 
+    if (this.commandOptions.helpCommand) {
+      this.commands.help = {
+        aliases: "No aliases",
+        args: false,
+        description: "Shows this list",
+        fullDescription: "Shows a list of commands and information on them",
+        usage: "<>help <command>"
       }
       this._client.on("messageCreate", message => {
-        this.ms = message.timestamp;
-        this.hour = ~~(this.ms / 36e5 % 24);
-        this.min = ~~(this.ms / 6e4 % 60);
-        this.mer;
-        if (this.hour < 12) {
-          this.mer = "AM";
-        } else if (this.hour === 12) {
-          this.mer = "PM";
-        } else if (this.hour === 0) {
-          this.hour += 12;
-          this.mer = "AM";
-        } else {
-          this.hour -= 12;
-          this.mer = "PM";
-        }
-        this.time = this.hour.toString() + ":" + this.min.toString() + " " + this.mer + "UTC";
-        // const hour = ms / 36e5 % 24, min = ms / 6e4 % 60, sec = ms % 1e3;
+        this.time = new Date(message.timestamp).toLocaleString("en-US", { hour: "numeric", minute: "numeric", second: "numeric" });
         this.msg = message.content.split(" ");
+        this.prefix = this.commandOptions.prefix.filter(pref => this.msg[0].startsWith(pref));
+        if (!this.prefix.length) return;
         this.req = false;
-        this.commandOptions.prefix.forEach(pref => {
-          if (this.msg[0].startsWith(pref)) {
-            this.req = true;
-            this.pref = pref.length;
+        this.msg[0] = this.msg[0].slice(this.prefix[0].length);
+        if (!this.msg[0]) return;
+        if (this.msg[0].toLowerCase() !== "help") return;
+        this.args = this.msg.slice(1);
+        if (!this.args[0]) {
+          this.embedNames = [];
+          this.embedFields = [];
+          this.embedValues = [];
+          for (var i in this.commands) {
+            this.embedNames.push(i);
+            this.embedValues.push(this.commands[i].description + ". Aliases: '" + (Array.isArray(this.commands[i].aliases) ? this.commands[i].aliases.join("', '") : "No aliases") + "'.");
           }
-        });
-        if (!this.req) return;
-        this.req = false;
-        this.msg[0] = this.msg[0].slice(this.pref);
-        this.args = this.msg.slice(1).join(" ");
-          for (var i = 0; i < this.helpCommandAliases.length; i++) {
-            if (this.helpCommandAliases.indexOf(this.msg[2].toLowerCase())) {
-              this.req = true;
-            }
-            if (this.req) {
-              if (!this.args) {
-                this.embedNames = [];
-                this.embedValues = [];
-                this.embedFields = [];
-                for (var j in this.commands) {
-                  this.embedNames.push(j);
-                  this.embedValues.push(this.commands[j].description + ". Usage: `" + this.commands[j].usage + "`.");
-                }
-                for (var j = 0; j < this.embedNames.length; j++) {
-                  this.embedFields.push({
-                    name: this.embedNames[j],
-                    value: this.embedValues[j],
-                    inline: false
-                  });
-                }
-                this._client.getDMChannel(message.author.id).then(msg => msg.createMessage({
-                  embed: {
-                    title: "Help command",
-                    description: this.commandOptions.description,
-                    author: {
-                      name: this.commandOptions.name || this._client.user.username,
-                      icon_url: this._client.user.avatarURL
-                    },
-                    color: 0x6F9678,
-                    fields: this.embedFields,
-                    footer: {
-                      text: this.time
-                    }
-                  }
-                }));
-                break;
-              } else {
-                for (var i in this.commands) {
-                  if (this.msg[1] === i || this.commands[i].aliases.includes(this.msg[1])) {
-                    message.channel.createMessage({
-                      embed: {
-                        title: "Help command",
-                        description: "Requested by " + message.author.username,
-                        author: {
-                          name: this.commandOptions.name || this._client.user.username,
-                          icon_url: this._client.user.avatarURL
-                        },
-                        color: 0x6F9678,
-                        fields: [{
-                          name: i,
-                          value: this.commands[i].fullDescription + ". Aliases: `" + this.commands[i].aliases.join("`, `") + "`. Usage: `" + this.commands[i].usage + "`.",
-                          inline: true
-                        }],
-                        footer: {
-                          text: this.time
-                        }
-                      }
-                    });
-                    break;
-                  }
-                }
+          for (var i = 0; i < this.embedNames.length; i++) {
+            this.embedFields.push({
+              name: this.embedNames[i],
+              value: this.embedValues[i],
+              inline: true
+            });
+          }
+          this.dm(message.author.id, {
+            embed: {
+              title: "Help command",
+              description: this.commandOptions.description,
+              thumbnail: {
+                url: this._client.user.avatarURL
+              },
+              author: {
+                name: this._client.user.username,
+                icon_url: this._client.user.avatarURL
+              },
+              color: 0x497C2C,
+              fields: this.embedFields,
+              footer: {
+                text: this.time
               }
-            } else continue;
-          }
+            }
+          });
+        } else {
+          var command = this.commandAliases[this.args[0].toLowerCase()] || this.args[0].toLowerCase();
+          if (!this.commands[command]) return this.send(message.channel.id, "Command not found.");
+          this.send(message.channel.id, {
+            embed: {
+              thumbnail: {
+                url: this._client.user.avatarURL
+              },
+              fields: [{
+                name: command,
+                value: this.commands[command].fullDescription + ". Aliases: '" + (Array.isArray(this.commands[command].aliases) ? this.commands[command].aliases.join("', '") : "No aliases") + "'. Usage: \`" + this.commands[command].usage + "\`.",
+                inline: true
+              }],
+              footer: {
+                text: this.time
+              },
+              color: 0x497C2C
+            }
+          })
+        }
       });
     }
   }
@@ -186,45 +148,113 @@ class Client {
     if (typeof label !== "string") throw new TypeError("incorrect label format (label must be a string)")
     if (label.includes(" ")) throw new Error("label may not include spaces: '" + label + "'");
     if (this.commands[label] || this.commandAliases[label]) throw new Error("you already registered a command with label: '" + label + "'");
+    this.args = options.args || false;
     this.options = {
       args: true,
       aliases: null,
       description: "No description",
-      fullDescription: "No description",
+      fullDescription: null,
       guild: true,
       dm: true,
-      usage: this.options.args ? `\`${this.commandOptions.prefix[0] + label} <args>\`` : this.commandOptions.prefix[0] + label;
-      invalidUsage: "You are using this command incorrectly. Try `" + this.commandOptions.prefix[0] + " " + label + "` for more information on this command.",
+      req: {},
+      usage: this.args ? this.commandOptions.prefix[0] + label +  " <args>" : this.commandOptions.prefix[0] + label,
+      invalidUsage: "You are using this command incorrectly. Try `" + this.commandOptions.prefix[0] + "help " + label + "` for more information on this command.",
+      invalidPermission: "You don't have permission to use this command."
     }
     if (typeof options === "object") {
       for (var i of Object.keys(options)) {
         this.options[i] = options[i];
       }
     }
-    if (this.aliases !== null) {
-      this.commandAliases.forEach((item, index) => {
-        if (this.commandAliases[item]) {
+    if (!this.options.req.permissions) this.options.req.permissions = [];
+    if (!this.options.req.roleIDs) this.options.req.roleIDs = [];
+    if (!this.options.req.rolenames) this.options.req.rolenames = [];
+    if (!this.options.req.userIDs) this.options.req.userIDs = [];
+    if (!this.options.req.usernames) this.options.req.usernames = [];
+    if (!this.options.fullDescription) this.options.fullDescription = this.options.description;
+    if (typeof this.options.req !== "undefined" && typeof this.options.req !== "object") throw new Error("requirements must be an object or undefined (command " + label + ")");
+    if (Array.isArray(this.options.aliases)) {
+      this.options.aliases.forEach((item, index) => {
+        if (typeof item !== "string") throw new TypeError("Aliases must be strings, item " + item + ", index " + index);
+        item = item.toLowerCase();
+        if (this.commandAliases[item] || this.commands[item]) {
           throw new Error("already registered a command with label " + item + ", index " + index + "from commandAliases");
-        } else this.commandAliases[item] = "used";
+        } else this.commandAliases[item] = label;
       });
     }
-    Registry.registerCommand(label, this.options);
+    this.run = this.Registry.registerCommand(label, this.options, this.getPrefix());
     this.commands[label] = {
       description: this.options.description,
       fullDescription: this.options.fullDescription,
       aliases: this.options.aliases || "No aliases",
       usage: this.options.usage,
-      prefix: this.commandOptions.prefix
+      run: this.run.run,
+      guild: this.options.guild,
+      dm: this.options.dm,
+      args: this.options.args,
+      invalidUsage: this.options.invalidUsage,
+      req: this.options.req,
+      invalidPermission: this.options.invalidPermission
     };
   }
   launch() {
+    this._client.on("messageCreate", message => {
+      if (this.commandOptions.ignoreSelf) {
+        if (message.author.id === this._client.user.id) return;
+      }
+      if (this.commandOptions.ignoreBots) {
+        if (message.author.bot) return;
+      }
+      var msg = message.content.split(/\s/);
+      var prefix = this.commandOptions.prefix.filter(pref => msg[0].startsWith(pref));
+      if (!prefix[0]) return;
+      msg[0] = msg[0].slice(prefix[0].length);
+      if (!msg[0]) return;
+      msg[0] = msg[0].toLowerCase();
+      var command = this.commandAliases[msg[0]] || msg[0];
+      if (command === "help") return;
+      if (!this.commands[command]) return;
+      command = this.commands[command];
+      var args = message.content.split(/\s/).slice(1).join(" ");
+      console.log(args);
+      if (command.args) {
+        if (!args) return this.send(message.channel.id, command.invalidUsage);
+      }
+      var req = permissionCheck(command, message);
+      if (!req) return this.send(message.channel.id, command.invalidPermission);
+      console.log(message.channel.id);
+      return command.run(this._client, message, args);
+    });
     this._client.connect();
   }
   exit(options) {
-    this._client.disconnect(options || {});
+    this._client.disconnect(options || null);
   }
   Register(commandPath, eventPath) {
-    return new Registry(commandPath, eventPath);
+    this.Registry = new Registry(commandPath, eventPath);
+    return this.Registry;
+  }
+  getPrefix() {
+    return this.commandOptions.prefix.join("\", \"");
+  }
+  dm(userid, message) {
+    this._client.getDMChannel(userid).then(msg => msg.createMessage(message));
+  }
+  send(channel, message) {
+    this._client.createMessage(channel, message);
+  }
+  HandleEvents(item) {
+    if (!Array.isArray(item)) throw new TypeError("item must be an array");
+    item.forEach(t => {
+      if (~this.handling.indexOf(t)) throw new Error("already handling event " + t);
+    });
+    var t = this.Registry.HandleEvents(item);
+    for (var i = 0; i < item.length; i++) {
+      this._client.on(item[i], t[i]);
+    }
+  }
+  setPrefix(prefix) {
+    this.commandOptions.prefix = prefix;
   }
 }
 

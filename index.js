@@ -9,7 +9,6 @@ function drooM(token, options, commandOptions) {
   return new Client(cl, commandOptions);
 }
 drooM.Client = Client;
-drooM.Handler = require("./src/Handler.js");
 drooM.Login = eris;
 drooM.Registry = require("./src/Registry.js");
 

@@ -1,6 +1,5 @@
 "use strict";
 const Client = require("./Client.js");
-const Handler = require("./Handler.js");
 const path = require("path");
 const fs = require("fs");
 /**
@@ -30,43 +29,35 @@ class Registry {
   * @arg {Boolean} [options.dm] Whether the command should be handled in private messages or not
   * @arg {String} [options.invalidUsage] The message to be sent if the command is used incorrectly
   */
-  registerCommand(label, options) {
+  registerCommand(label, options, prefix) {
     if (this.commands[label]) throw new Error("you already registered a command with label '" + label + "'");
+    this.options = options;
     try {
       fs.readFileSync(path.join(this.path, label + ".js"));
     } catch(err) {
-      this.data = "const prefix = require(\"droom.js\").Client.commandOptions.prefix;";
-      this.data += "function " + label + "(message) {\n";
-      this.data += "\tlet msg = message.content.split(" ");\n";
-      this.data += "\tlet req = false;\n";
-      this.data += "\tfor (i = 0; i < prefix.length; i++) {\n";
-      this.data += "\t\tif (msg[0].startsWith(prefix[i])) req = true;\n";
-      this.data += "\t\tmsg[0] = msg[0].slice(prefix[i].length);";
-      this.data += "\t}";
-      this.data += "\tif (!req) return;\n";
-      this.data += "\tif (!~" + options.commandAliases + ".indexOf(msg[0].toLowerCase()) && msg[0] !== " + label + ") return;\n";
-      if (options.args) {
-        this.data += "\tlet args = message.content.split(\" \").slice(1).join(\" \");\n\tif (!args) return message.channel.createMessage(" + options.invalidUsage + ");\n";
-      }
-      if (!options.guild) {
-        this.data += "\tif (message.channel.guild) return;\n";
-      } else if (!options.dm) {
-        this.data += "\tif (message.channel.type === 1) return;\n";
-      }
-      this.data += "}\n\nmodule.exports = " + label + ";";
+      this.data = "function " + label + "(client, message) {\n";
+      this.data += "}\n\nmodule.exports.run = " + label + ";";
       fs.writeFileSync(path.join(this.path, label + ".js"), this.data);
     }
     this.file = require(path.join(this.path, label + ".js"));
-    Handler.onMessageCreate(this.file);
-    this.commands[label] = options;
+    return this.file;
+    this.commands[label] = this.options;
   }
   HandleEvents(item) {
-    if (!Array.isArray(item)) throw new TypeError("incorrect item format (item must be an array of strings)");
-    item.forEach((y, index) => {
-      if (typeof y !== "string") {
-        throw new TypeError("incorrect item format (item must be a string, index " + index + ")");
+    if (!Array.isArray(item)) throw new TypeError("incorrect item format (item must be an array)");
+    var t = item.map((y, index) => {
+      try {
+        fs.readFileSync(path.join(this.evp, y + ".js"));
+      } catch(err) {
+        this.data = "function " + y + "() {\n\n}";
+        this.data += "module.exports = " + y;
+        fs.writeFileSync(path.join(this.evp, y + ".js"), this.data);
       }
+      this.file = require(path.join(this.evp, y + ".js"));
+      return this.file;
     });
+    return t;
   }
-
 }
+
+module.exports = Registry;
