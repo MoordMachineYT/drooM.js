@@ -35,10 +35,8 @@ class Registry {
     try {
       fs.readFileSync(path.join(this.path, label + ".js"));
     } catch(err) {
-<<<<<<< HEAD
       this.data = "function " + label + "(client, message) {\n";
       this.data += "}\n\nmodule.exports.run = " + label + ";";
-=======
       this.data = "const prefix = require(\"droom.js\").Client.commandOptions.prefix;";
       this.data += "function " + label + "(message) {\n";
       this.data += "\tlet msg = message.content.split(\" \");\n";
@@ -58,7 +56,6 @@ class Registry {
         this.data += "\tif (message.channel.type === 1) return;\n";
       }
       this.data += "}\n\nmodule.exports = " + label + ";";
->>>>>>> cd0eb17a5c08d782ac52045284daa427689bb6af
       fs.writeFileSync(path.join(this.path, label + ".js"), this.data);
     }
     this.file = require(path.join(this.path, label + ".js"));
