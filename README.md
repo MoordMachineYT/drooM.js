@@ -3,7 +3,12 @@ The newest and smoothest framework for a discord bot.
 # Information
 This framework is created to make coding discord bots go way faster and easier. It has made a `help` command for you, so you don't have to (you can disable this command). It also has a very useful command registry, it creates a file with a basic template for you if the command file doesn't exist. This is very useful for starters. Besides, it has an event handler too. It also creates a file with a basic template for you. 
 # How to use this framework
-This framework needs 1 module, eris. Type in your console: `npm install eris`. Make sure you are in the right directory and you have installed NodeJS.
+In order to install this framework, you need to do the following:
+1) Clone this project, copy a link to this project and type `git <link>` in the console. Make sure you are in the right directory and you have installed NodeJS. 
+
+2) Just type `npm install droom.js` and you're ready to go!
+
+This framework needs 1 module, eris. Type in your console: `npm install eris`.
 
 Firstly, we need to require the framework, in order to be able to use it. Your code should look like this: `const drooM = require("droom.js");`
 
