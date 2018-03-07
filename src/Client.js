@@ -212,17 +212,13 @@ class Client {
       if (!msg[0]) return;
       msg[0] = msg[0].toLowerCase();
       var command = this.commandAliases[msg[0]] || msg[0];
-      if (command === "help") return;
+      if (command === "help" && this.commandOptions.helpCommand) return;
       if (!this.commands[command]) return;
       command = this.commands[command];
       var args = message.content.split(/\s/).slice(1).join(" ");
-      console.log(args);
-      if (command.args) {
-        if (!args) return this.send(message.channel.id, command.invalidUsage);
-      }
+      if (command.args && !args) return this.send(message.channel.id, command.invalidUsage);
       var req = permissionCheck(command, message);
       if (!req) return this.send(message.channel.id, command.invalidPermission);
-      console.log(message.channel.id);
       return command.run(this._client, message, args);
     });
     this._client.connect();
