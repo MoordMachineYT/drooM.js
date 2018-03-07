@@ -13,7 +13,7 @@ class Command {
           break;
         }
       }
-      if (thisa.req) return true;
+      if (thisa.req || msg.member.permission.has("administrator")) return true;
       thisa.req = true;
     }
     if (command.req.roleIDs[0]) {
