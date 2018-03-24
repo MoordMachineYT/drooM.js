@@ -7,7 +7,7 @@ In order to install this framework, you need to do the following:
 
 1) Just type `npm install droom.js` and you've installed drooM.js.
 
-This framework needs 1 module, eris. Type in your console: `npm install eris`.
+Now, of course, we wanna use it.
 
 Firstly, we need to require the framework, in order to be able to use it. Your code should look like this: `const drooM = require("droom.js");`.
 
@@ -25,12 +25,11 @@ Next, you need to add a command. You do that like so: `client.addCommand("LABEL"
 Let's make a ping pong command to show you how this works. `client.addCommand("ping");`.
 
 This will create a new file called "**ping.js**". The content of this file will look like this:
-`const drooM = require("droom.js");
 
+`const drooM = require("droom.js");
 function ping(droom, message, args) {
   const client = droom._client;
 }
-
 module.exports.run = ping;
 module.exports.path = __dirname + "/ping.js";`.
 
