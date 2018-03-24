@@ -18,7 +18,9 @@
     "moord",
     "moordmachineyt",
     "eris",
-    "framework"
+    "framework",
+    "droom.js",
+    "drooM.js"
   ],
   "repository": {
     "type": "git",
