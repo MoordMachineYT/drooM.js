@@ -17,6 +17,7 @@ class Client {
   * @arg {String} [commandOptions.name=null] The name of the bot
   * @arg {String} [commandOptions.owner="An unknown user"] The owner of the bot
   * @arg {Boolean} [commandOptions.helpCommand=true] The default help command to be enabled or disabled
+  * @arg {Boolean} [commandOptions.evalCommand=true] The default eval command to be enabled or disabled
   * @arg {Array<String>} [commandOptions.helpCommandAliases=["help"]] The aliases for the help command if used
   * @arg {Array<String>} [commandOptions.prefix=["!"]] The prefix for the bot
   * @arg {Boolean} [commandOptions.ignoreBots=true] Whether to respond to other bots or not
@@ -28,8 +29,9 @@ class Client {
     this.commandOptions = {
       description: "A bot built with the drooM.js framework",
       name: null,
-      owner: "An unknown user",
+      owner: null,
       helpCommand: true,
+      evalCommand: true,
       prefix: ["!"],
       ignoreBots: true,
       ignoreSelf: true,
@@ -39,12 +41,14 @@ class Client {
     this.commands = {};
     this.commandAliases = {};
     this.handling = [];
+    this.caches = 0;
 
     if (typeof commandOptions === "object") {
       for (var i of Object.keys(commandOptions)) {
         this.commandOptions[i] = commandOptions[i];
       }
     }
+    if (!Array.isArray(this.commandOptions.owner)) this.commandOptions.owner = [this.commandOptions.owner];
     if (Array.isArray(this.commandOptions.prefix)) {
       this.commandOptions.prefix.forEach((item, index) => {
         if (typeof item !== "string") {
@@ -64,72 +68,158 @@ class Client {
         args: false,
         description: "Shows this list",
         fullDescription: "Shows a list of commands and information on them",
-        usage: "<>help <command>"
-      }
-      this._client.on("messageCreate", message => {
-        this.time = new Date(message.timestamp).toLocaleString("en-US", { hour: "numeric", minute: "numeric", second: "numeric" });
-        this.msg = message.content.split(" ");
-        this.prefix = this.commandOptions.prefix.filter(pref => this.msg[0].startsWith(pref));
-        if (!this.prefix.length) return;
-        this.req = false;
-        this.msg[0] = this.msg[0].slice(this.prefix[0].length);
-        if (!this.msg[0]) return;
-        if (this.msg[0].toLowerCase() !== "help") return;
-        this.args = this.msg.slice(1);
-        if (!this.args[0]) {
-          this.embedNames = [];
-          this.embedFields = [];
-          this.embedValues = [];
-          for (var i in this.commands) {
-            this.embedNames.push(i);
-            this.embedValues.push(this.commands[i].description + ". Aliases: '" + (Array.isArray(this.commands[i].aliases) ? this.commands[i].aliases.join("', '") : "No aliases") + "'.");
-          }
-          for (var i = 0; i < this.embedNames.length; i++) {
-            this.embedFields.push({
-              name: this.embedNames[i],
-              value: this.embedValues[i],
-              inline: true
+        usage: "<>help <command>",
+        req: {
+          permissions: [],
+          userIDs: {},
+          usernames: [],
+          roleIDs: [],
+          rolenames: []
+        },
+        run: (drooM, message, args) => {
+          drooM.time = new Date(message.timestamp).toLocaleString("en-US", { hour: "numeric", minute: "numeric", second: "numeric" });
+          drooM.args = args.split(" ");
+          if (!drooM.args[0]) {
+            drooM.embedNames = [];
+            drooM.embedFields = [];
+            drooM.embedValues = [];
+            for (var i in drooM.commands) {
+              drooM.embedNames.push(i);
+              drooM.embedValues.push(drooM.commands[i].description + ". Aliases: '" + (Array.isArray(drooM.commands[i].aliases) ? drooM.commands[i].aliases.join("', '") : "No aliases") + "'.");
+            }
+            for (var i = 0; i < drooM.embedNames.length; i++) {
+              drooM.embedFields.push({
+                name: drooM.embedNames[i],
+                value: drooM.embedValues[i],
+                inline: true
+              });
+            }
+            drooM.dm(message.author.id, {
+              embed: {
+                title: "Help command",
+                description: drooM.commandOptions.description,
+                thumbnail: {
+                  url: drooM._client.user.avatarURL
+                },
+                author: {
+                  name: drooM._client.user.username,
+                  icon_url: drooM._client.user.avatarURL
+                },
+                color: 0x497C2C,
+                fields: drooM.embedFields,
+                footer: {
+                  text: drooM.time
+                }
+              }
+            });
+          } else {
+            var command = drooM.commandAliases[drooM.args[0].toLowerCase()] || drooM.args[0].toLowerCase();
+            if (!drooM.commands[command]) return drooM.send(message.channel.id, "Command not found.");
+            drooM.send(message.channel.id, {
+              embed: {
+                thumbnail: {
+                  url: drooM._client.user.avatarURL
+                },
+                fields: [{
+                  name: command,
+                  value: drooM.commands[command].fullDescription + ". Aliases: '" + (Array.isArray(drooM.commands[command].aliases) ? drooM.commands[command].aliases.join("', '") : "No aliases") + "'. Usage: \`" + drooM.commands[command].usage + "\`.",
+                  inline: true
+                }],
+                footer: {
+                  text: drooM.time
+                },
+                color: 0x497C2C
+              }
             });
           }
-          this.dm(message.author.id, {
-            embed: {
-              title: "Help command",
-              description: this.commandOptions.description,
-              thumbnail: {
-                url: this._client.user.avatarURL
-              },
-              author: {
-                name: this._client.user.username,
-                icon_url: this._client.user.avatarURL
-              },
-              color: 0x497C2C,
-              fields: this.embedFields,
-              footer: {
-                text: this.time
-              }
-            }
-          });
-        } else {
-          var command = this.commandAliases[this.args[0].toLowerCase()] || this.args[0].toLowerCase();
-          if (!this.commands[command]) return this.send(message.channel.id, "Command not found.");
-          this.send(message.channel.id, {
-            embed: {
-              thumbnail: {
-                url: this._client.user.avatarURL
-              },
-              fields: [{
-                name: command,
-                value: this.commands[command].fullDescription + ". Aliases: '" + (Array.isArray(this.commands[command].aliases) ? this.commands[command].aliases.join("', '") : "No aliases") + "'. Usage: \`" + this.commands[command].usage + "\`.",
-                inline: true
-              }],
-              footer: {
-                text: this.time
-              },
-              color: 0x497C2C
-            }
-          })
         }
-      });
+      }
+    }
+    if (this.commandOptions.evalCommand) {
+      if (typeof this.commandOptions.owner === "string") {
+        this.commandOptions.owner = [this.commandOptions.owner];
+      } else if (Array.isArray(this.commandOptions.owner)) {
+        this.commandOptions.owner.forEach((id, i) => {
+          if (typeof id !== "string") throw new TypeError(`client.commandOptions.owner must be an array of strings or a string (index ${i})`);
+        });
+      }
+      this.commands.eval = {
+        aliases: "No aliases",
+        args: true,
+        description: "Evaluates JavaScript code",
+        usage: "<>eval <input>",
+        req: {
+          userIDs: this.commandOptions.owner,
+          permissions: [],
+          usernames: [],
+          userIDs: [],
+          roleIDs: [],
+          rolenames: []
+        },
+        run: (drooM, message, args) => {
+          const client = this._client;
+          if (args.startsWith("nooutput")) {
+            const ev = args.split(/\s/).slice(1).join(" ");
+            try {
+              eval(ev);
+            } catch(err) {
+              message.channel.createMessage({
+                embed: {
+                  fields: [{
+                    name: "Input",
+                    value: ev,
+                    inline: false
+                  }, {
+                    name: "Error",
+                    value: err,
+                    inline: false
+                  }],
+                  footer: {
+                    text: new Date(message.timestamp).toLocaleString("en-US", { hour: "numeric", minute: "numeric" })
+                  }
+                }
+              });
+            }
+          } else {
+            try {
+              const evaled = eval(args);
+              message.channel.createMessage({
+                embed: {
+                  fields: [{
+                    name: "Input",
+                    value: `\`\`\`${args}\`\`\``,
+                    inline: false
+                  }, {
+                    name: "Output",
+                    value: `\`\`\`${evaled}\`\`\``,
+                    inline: false
+                  }],
+                  footer: {
+                    text: new Date(message.timestamp).toLocaleString("en-US", { hour: "numeric", minute: "numeric" })
+                  }
+                }
+              });
+            } catch(err) {
+              message.channel.createMessage({
+                embed: {
+                  fields: [{
+                    name: "Input",
+                    value: `\`\`\`${args}\`\`\``,
+                    inline: false
+                  }, {
+                    name: "Error",
+                    value: `\`\`\`${err}\n\`\`\``,
+                    inline: false
+                  }],
+                  footer: {
+                    text: new Date(message.timestamp).toLocaleString("en-US", { hour: "numeric", minute: "numeric" })
+                  }
+                }
+              });
+            }
+          }
+        }
+      }
     }
   }
   /**
@@ -144,8 +234,9 @@ class Client {
   * @arg {Boolean} [options.dm] Whether the command should be handled in private messages or not
   * @arg {String} [options.invalidUsage] The message to be sent if the command is used incorrectly
   */
-  AddCommand(label, options) {
-    if (typeof label !== "string") throw new TypeError("incorrect label format (label must be a string)")
+  addCommand(label, options, excPath) {
+    if (typeof label !== "string") throw new TypeError("incorrect label format (label must be a string)");
+    if (typeof excPath !== "string") excPath = null;
     if (label.includes(" ")) throw new Error("label may not include spaces: '" + label + "'");
     if (this.commands[label] || this.commandAliases[label]) throw new Error("you already registered a command with label: '" + label + "'");
     this.args = options.args || false;
@@ -182,13 +273,14 @@ class Client {
         } else this.commandAliases[item] = label;
       });
     }
-    this.run = this.Registry.registerCommand(label, this.options, this.getPrefix());
+    this.run = this.Registry.registerCommand(label, this.options, this.getPrefix(), excPath);
     this.commands[label] = {
       description: this.options.description,
       fullDescription: this.options.fullDescription,
       aliases: this.options.aliases || "No aliases",
       usage: this.options.usage,
       run: this.run.run,
+      path: this.run.path,
       guild: this.options.guild,
       dm: this.options.dm,
       args: this.options.args,
@@ -197,8 +289,62 @@ class Client {
       invalidPermission: this.options.invalidPermission
     };
   }
+  delCommand(label, time) {
+    label = label.toLowerCase();
+    if (typeof time !== "number") time = null;
+    if (!time) {
+      if (!this.commands[label]) return;
+      delete this.commands[label];
+      for (var i in this.commandAliases) {
+        if (this.commandAliases[i] === label) delete this.commandAliases[i];
+      }
+    } else {
+      var command = this.commandAliases[label] || label;
+      if (!this.commands[command]) return;
+      var props = this.commands[command];
+      delete this.commands[command];
+      setTimeout(() => {
+        this.commands[command] = props;
+      }, time);
+    }
+  }
+  refresh(label) {
+    var time = new Date();
+    if (!label) {
+      for (var i in this.commands) {
+        if (!this.commands[i].path) continue;
+        this.caches++;
+        const command = fs.readFileSync(this.commands[i].path, "utf8");
+        fs.writeFileSync(path.join(__dirname, `../cache/${this.caches}.js`), command);
+        this.commands[i].run = require(path.join(__dirname, `../cache/${this.caches}.js`)).run;
+      }
+    } else {
+      if (!this.commands[label]) return "Command not found.";
+      if (!this.commands[label].path) return "This command isn't refreshable.";
+      this.caches++;
+      const command = fs.readFileSync(this.commands[label].path, "utf8");
+      fs.writeFileSync(path.join(__dirname, `../cache/${this.caches}.js`));
+      this.commands[i].run = require(path.join(__dirname, `../cache/${this.caches}.js`)).run;
+    }
+    time = new Date() - time;
+    return "Completed reload in " + time.toString() + "ms.";
+  }
   launch() {
+    fs.mkdir(path.join(__dirname, "../cache"), err => {
+      if (err) {
+        fs.rmdir(path.join(__dirname, "../cache"), async (err, result) => {
+          if (err) {
+            const files = await fs.readdirSync(path.join(__dirname, "../cache"));
+            files.forEach(f => {
+              fs.unlinkSync(path.join(__dirname, `../cache/${f}`));
+            });
+          }
+        });
+      }
+    });
     this._client.on("messageCreate", message => {
+      this.ping = new Date();
+      this.ping = this.ping - message.timestamp;
       if (this.commandOptions.ignoreSelf) {
         if (message.author.id === this._client.user.id) return;
       }
@@ -212,21 +358,20 @@ class Client {
       if (!msg[0]) return;
       msg[0] = msg[0].toLowerCase();
       var command = this.commandAliases[msg[0]] || msg[0];
-      if (command === "help" && this.commandOptions.helpCommand) return;
       if (!this.commands[command]) return;
       command = this.commands[command];
       var args = message.content.split(/\s/).slice(1).join(" ");
       if (command.args && !args) return this.send(message.channel.id, command.invalidUsage);
       var req = permissionCheck(command, message);
       if (!req) return this.send(message.channel.id, command.invalidPermission);
-      return command.run(this._client, message, args);
+      return command.run(this, message, args);
     });
     this._client.connect();
   }
   exit(options) {
     this._client.disconnect(options || null);
   }
-  Register(commandPath, eventPath) {
+  register(commandPath, eventPath) {
     this.Registry = new Registry(commandPath, eventPath);
     return this.Registry;
   }
@@ -239,17 +384,24 @@ class Client {
   send(channel, message) {
     this._client.createMessage(channel, message);
   }
-  HandleEvents(item) {
+  handleEvents(item) {
     if (!Array.isArray(item)) throw new TypeError("item must be an array");
     item.forEach(t => {
       if (~this.handling.indexOf(t)) throw new Error("already handling event " + t);
     });
     var t = this.Registry.HandleEvents(item);
-    for (var i = 0; i < item.length; i++) {
-      this._client.on(item[i], t[i]);
-    }
+    item.forEach((ev, i) => {
+      this._client.on(ev, (arg1, arg2, arg3) => {
+        this.handling.push(ev);
+        return t[i](this, arg1, arg2, arg3);
+      });
+    });
   }
   setPrefix(prefix) {
+    if (!Array.isArray(prefix)) prefix = [prefix];
+    prefix.forEach(pref => {
+      if (pref.includes(" ")) throw new Error("prefix may not include spaces");
+    });
     this.commandOptions.prefix = prefix;
   }
 }

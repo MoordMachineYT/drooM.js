@@ -1,7 +1,7 @@
 {
-  "name": "droom",
+  "name": "droom.js",
   "version": "1.0.0",
-  "description": "",
+  "description": "The newest and smoothest framework for a discord bot. # Information This framework is created to make coding discord bots go way faster and easier. It has made a `help` and an `eval` command for you, so you don't have to (you can disable these commands). It also has a very useful command registry, it creates a file with a basic template for you if the command file doesn't exist. This is very useful for starters. Besides, it has an event handler too. It also creates a file with a basic template for you. # How to use this framework In order to install this framework, you need to do the following:",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
@@ -10,10 +10,22 @@
     "type": "git",
     "url": "git+https://github.com/MoordMachineYT/drooM.js.git"
   },
-  "author": "",
-  "license": "ISC",
+  "author": "MoordMachineYT#1910",
+  "license": "MIT",
   "bugs": {
     "url": "https://github.com/MoordMachineYT/drooM.js/issues"
   },
-  "homepage": "https://github.com/MoordMachineYT/drooM.js#readme"
+  "homepage": "https://github.com/MoordMachineYT/drooM.js#readme",
+  "dependencies": {
+    "eris": "^0.8.5"
+  },
+  "devDependencies": {},
+  "keywords": [
+    "drooM",
+    "droom",
+    "moord",
+    "moordmachineyt",
+    "eris",
+    "framework"
+  ]
 }

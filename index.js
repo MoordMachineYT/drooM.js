@@ -8,8 +8,10 @@ function drooM(token, options, commandOptions) {
   const cl = new eris(token, options);
   return new Client(cl, commandOptions);
 }
-drooM.Client = Client;
-drooM.Login = eris;
+drooM.Client   = Client;
+drooM.Command  = require("./src/Command.js");
+drooM.Embed    = require("./src/Embed.js");
+drooM.Login    = eris;
 drooM.Registry = require("./src/Registry.js");
 
 module.exports = drooM;

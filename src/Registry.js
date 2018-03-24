@@ -15,7 +15,6 @@ class Registry {
   constructor(messageCreatePath, eventHandlerPath) {
     this.path = messageCreatePath;
     this.evp = eventHandlerPath;
-    this.commands = {};
   }
   /**
   * Registers the commands
@@ -29,19 +28,28 @@ class Registry {
   * @arg {Boolean} [options.dm] Whether the command should be handled in private messages or not
   * @arg {String} [options.invalidUsage] The message to be sent if the command is used incorrectly
   */
-  registerCommand(label, options, prefix) {
-    if (this.commands[label]) throw new Error("you already registered a command with label '" + label + "'");
+  registerCommand(label, options, prefix, excPath) {
     this.options = options;
-    try {
-      fs.readFileSync(path.join(this.path, label + ".js"));
-    } catch(err) {
-      this.data = "function " + label + "(client, message) {\n";
-      this.data += "}\n\nmodule.exports.run = " + label + ";";
-      fs.writeFileSync(path.join(this.path, label + ".js"), this.data);
+    if (!excPath) {
+      try {
+        fs.readFileSync(path.join(this.path, label + ".js"));
+      } catch(err) {
+        this.data = "const drooM = require(\"droom.js\");\n\n";
+        this.data += "function " + label + "(droom, message, args) {\n";
+        this.data += "\tconst client = droom._client;\n";
+        this.data += "}\n\nmodule.exports.run = " + label + ";\nmodule.exports.path = __dirname + \"/" + label + ".js\";";
+        fs.writeFileSync(path.join(this.path, label + ".js"), this.data);
+      }
+      this.file = require(path.join(this.path, label + ".js"));
+      return this.file;
+    } else {
+      try {
+        this.file = require(excPath);
+        return this.file;
+      } catch(err) {
+        throw new Error(`file ${excPath} not found`);
+      }
     }
-    this.file = require(path.join(this.path, label + ".js"));
-    return this.file;
-    this.commands[label] = this.options;
   }
   HandleEvents(item) {
     if (!Array.isArray(item)) throw new TypeError("incorrect item format (item must be an array)");
@@ -49,13 +57,15 @@ class Registry {
       try {
         fs.readFileSync(path.join(this.evp, y + ".js"));
       } catch(err) {
-        this.data = "function " + y + "() {\n\n}";
-        this.data += "module.exports = " + y;
+        this.data = "const drooM = require(\"droom.js\");\n\n";
+        this.data += "function " + y + "(droom, param1, param2, param3) {\n\tconst client = droom._client;\n}";
+        this.data += "\n\nmodule.exports = " + y + ";";
         fs.writeFileSync(path.join(this.evp, y + ".js"), this.data);
       }
       this.file = require(path.join(this.evp, y + ".js"));
       return this.file;
     });
+    console.log(t);
     return t;
   }
 }
