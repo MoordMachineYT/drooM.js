@@ -2,7 +2,7 @@
 const Registry = require("./Registry.js");
 const fs = require("fs");
 const path = require("path");
-const { permissionCheck } = require("./Command.js");
+const { permissionCheck, commandCheck } = require("./Command.js");
 
 /**
 * Represents the main drooM.js client
@@ -11,20 +11,20 @@ const { permissionCheck } = require("./Command.js");
 */
 class Client {
   /**
-  * @arg {Class} _client The eris client to be used
+  * @arg {Object} _client The eris client to be used
   * @arg {Object} [commandOptions] The additional options for commands
   * @arg {String} [commandOptions.description="A bot built with the drooM.js framework"] The bot's description
-  * @arg {String} [commandOptions.name=null] The name of the bot
-  * @arg {String} [commandOptions.owner="An unknown user"] The owner of the bot
-  * @arg {Boolean} [commandOptions.helpCommand=true] The default help command to be enabled or disabled
-  * @arg {Boolean} [commandOptions.evalCommand=true] The default eval command to be enabled or disabled
-  * @arg {Array<String>} [commandOptions.helpCommandAliases=["help"]] The aliases for the help command if used
+  * @arg {String?} [commandOptions.name] The name of the bot
+  * @arg {String?} [commandOptions.owner] The owner of the bot
+  * @arg {Boolean} [commandOptions.helpCommand] The default help command to be enabled or disabled
+  * @arg {Boolean} [commandOptions.evalCommand] The default eval command to be enabled or disabled
+  * @arg {Object} [commandOptions.messageLimit=50] The maximum cached channel messages
   * @arg {Array<String>} [commandOptions.prefix=["!"]] The prefix for the bot
-  * @arg {Boolean} [commandOptions.ignoreBots=true] Whether to respond to other bots or not
-  * @arg {Boolean} [commandOptions.ignoreSelf=true] Whether to respond to the messages sent by this client or not
+  * @arg {Boolean} [commandOptions.ignoreBots] Whether to respond to other bots or not
+  * @arg {Boolean} [commandOptions.ignoreSelf] Whether to respond to the messages sent by this client or not
   * @arg {String} [commandOptions.ready="The bot has started and is ready for use"] Posts this in the console when the bot is ready for use
   */
-  constructor(cl, commandOptions) {
+  constructor(cl, commandOptions, lib, token) {
     this._client = cl;
     this.commandOptions = {
       description: "A bot built with the drooM.js framework",
@@ -32,22 +32,30 @@ class Client {
       owner: null,
       helpCommand: true,
       evalCommand: true,
+      messageLimit: 50,
       prefix: ["!"],
       ignoreBots: true,
       ignoreSelf: true,
       ready: "The bot has started and is ready for use"
     };
+    this.lib = lib;
+    if (this.lib === "discord.js") this.token = token;
 
     this.commands = {};
     this.commandAliases = {};
     this.handling = [];
     this.caches = 0;
+    this.messages = {};
 
     if (typeof commandOptions === "object") {
       for (var i of Object.keys(commandOptions)) {
         this.commandOptions[i] = commandOptions[i];
       }
     }
+
+    if (typeof this.commandOptions.messageLimit !== "number") this.commandOptions.messageLimit = 50;
+    if (this.commandOptions.messageLimit === 0) this.commandOptions.messageLimit++;
+
     if (!Array.isArray(this.commandOptions.owner)) this.commandOptions.owner = [this.commandOptions.owner];
     if (Array.isArray(this.commandOptions.prefix)) {
       this.commandOptions.prefix.forEach((item, index) => {
@@ -71,13 +79,13 @@ class Client {
         usage: "<>help <command>",
         req: {
           permissions: [],
-          userIDs: {},
+          userIDs: [],
           usernames: [],
           roleIDs: [],
           rolenames: []
         },
         run: (drooM, message, args) => {
-          drooM.time = new Date(message.timestamp).toLocaleString("en-US", { hour: "numeric", minute: "numeric", second: "numeric" });
+          drooM.time = new Date(message.timestamp || message.createdTimestamp).toLocaleString("en-US", { hour: "numeric", minute: "numeric", second: "numeric" });
           drooM.args = args.split(" ");
           if (!drooM.args[0]) {
             drooM.embedNames = [];
@@ -85,7 +93,7 @@ class Client {
             drooM.embedValues = [];
             for (var i in drooM.commands) {
               drooM.embedNames.push(i);
-              drooM.embedValues.push(drooM.commands[i].description + ". Aliases: '" + (Array.isArray(drooM.commands[i].aliases) ? drooM.commands[i].aliases.join("', '") : "No aliases") + "'.");
+              drooM.embedValues.push(drooM.commands[i].description);
             }
             for (var i = 0; i < drooM.embedNames.length; i++) {
               drooM.embedFields.push({
@@ -122,7 +130,7 @@ class Client {
                 },
                 fields: [{
                   name: command,
-                  value: drooM.commands[command].fullDescription + ". Aliases: '" + (Array.isArray(drooM.commands[command].aliases) ? drooM.commands[command].aliases.join("', '") : "No aliases") + "'. Usage: \`" + drooM.commands[command].usage + "\`.",
+                  value: drooM.commands[command].fullDescription + ".\n\nAliases: '" + (Array.isArray(drooM.commands[command].aliases) ? drooM.commands[command].aliases.join("', '") : "No aliases") + "'.\nUsage: \`" + drooM.commands[command].usage + "\`.",
                   inline: true
                 }],
                 footer: {
@@ -149,10 +157,9 @@ class Client {
         description: "Evaluates JavaScript code",
         usage: "<>eval <input>",
         req: {
-          userIDs: this.commandOptions.owner,
+          userIDs: this.commandOptions.owner[0] ? this.commandOptions.owner : "No access to anyone",
           permissions: [],
           usernames: [],
-          userIDs: [],
           roleIDs: [],
           rolenames: []
         },
@@ -163,7 +170,7 @@ class Client {
             try {
               eval(ev);
             } catch(err) {
-              message.channel.createMessage({
+              this.send(message.channel.id, {
                 embed: {
                   fields: [{
                     name: "Input",
@@ -175,7 +182,7 @@ class Client {
                     inline: false
                   }],
                   footer: {
-                    text: new Date(message.timestamp).toLocaleString("en-US", { hour: "numeric", minute: "numeric" })
+                    text: new Date(message.timestamp || message.createdTimestamp).toLocaleString("en-US", { hour: "numeric", minute: "numeric" })
                   }
                 }
               });
@@ -183,7 +190,7 @@ class Client {
           } else {
             try {
               const evaled = eval(args);
-              message.channel.createMessage({
+              this.send(message.channel.id, {
                 embed: {
                   fields: [{
                     name: "Input",
@@ -195,12 +202,12 @@ class Client {
                     inline: false
                   }],
                   footer: {
-                    text: new Date(message.timestamp).toLocaleString("en-US", { hour: "numeric", minute: "numeric" })
+                    text: new Date(message.timestamp || message.createdTimestamp).toLocaleString("en-US", { hour: "numeric", minute: "numeric" })
                   }
                 }
               });
             } catch(err) {
-              message.channel.createMessage({
+              this.send(message.channel.id, {
                 embed: {
                   fields: [{
                     name: "Input",
@@ -212,7 +219,7 @@ class Client {
                     inline: false
                   }],
                   footer: {
-                    text: new Date(message.timestamp).toLocaleString("en-US", { hour: "numeric", minute: "numeric" })
+                    text: new Date(message.timestamp || message.createdTimestamp).toLocaleString("en-US", { hour: "numeric", minute: "numeric" })
                   }
                 }
               });
@@ -296,15 +303,25 @@ class Client {
       if (!this.commands[label]) return;
       delete this.commands[label];
       for (var i in this.commandAliases) {
-        if (this.commandAliases[i] === label) delete this.commandAliases[i];
+        if (this.commandAliases[i] === label) {
+          delete this.commandAliases[i];
+        }
       }
     } else {
       var command = this.commandAliases[label] || label;
       if (!this.commands[command]) return;
       var props = this.commands[command];
       delete this.commands[command];
+      var aliases = [];
+      for (var i in this.commandAliases) {
+        if (this.commandAliases[i] === command) {
+          aliases.push(i);
+          delete this.commandAliases[i];
+        }
+      }
       setTimeout(() => {
         this.commands[command] = props;
+        aliases.forEach(a => this.commandAliases[a] = command);
       }, time);
     }
   }
@@ -326,6 +343,8 @@ class Client {
       fs.writeFileSync(path.join(__dirname, `../cache/${this.caches}.js`));
       this.commands[i].run = require(path.join(__dirname, `../cache/${this.caches}.js`)).run;
     }
+    delete this.messages;
+    this.messages = {};
     time = new Date() - time;
     return "Completed reload in " + time.toString() + "ms.";
   }
@@ -338,38 +357,57 @@ class Client {
             files.forEach(f => {
               fs.unlinkSync(path.join(__dirname, `../cache/${f}`));
             });
-          }
+          } else fs.mkdirSync(path.join(__dirname, "../cache"));
         });
       }
     });
+    this._client.on("message", message => { this._client.emit("messageCreate", message); });
     this._client.on("messageCreate", message => {
       this.ping = new Date();
-      this.ping = this.ping - message.timestamp;
+      this.ping -= message.timestamp || message.createdTimestamp;
       if (this.commandOptions.ignoreSelf) {
         if (message.author.id === this._client.user.id) return;
       }
       if (this.commandOptions.ignoreBots) {
-        if (message.author.bot) return;
+        if (message.author.bot) return this.storeMessage(message);
       }
-      var msg = message.content.split(/\s/);
-      var prefix = this.commandOptions.prefix.filter(pref => msg[0].startsWith(pref));
-      if (!prefix[0]) return;
-      msg[0] = msg[0].slice(prefix[0].length);
-      if (!msg[0]) return;
-      msg[0] = msg[0].toLowerCase();
+      const length = commandCheck(message, this.commandOptions.prefix);
+      if (!length) return this.storeMessage(message);
+      var msg = message.content.toLowerCase().slice(length).split(" ");
       var command = this.commandAliases[msg[0]] || msg[0];
       if (!this.commands[command]) return;
       command = this.commands[command];
-      var args = message.content.split(/\s/).slice(1).join(" ");
-      if (command.args && !args) return this.send(message.channel.id, command.invalidUsage);
-      var req = permissionCheck(command, message);
-      if (!req) return this.send(message.channel.id, command.invalidPermission);
-      return command.run(this, message, args);
+      var args = msg.slice(1).join(" ");
+      if (command.args && !args) return () => {
+        this.send(message.channel.id, command.invalidUsage);
+        this.storeMessage(message);
+      };
+      var req = permissionCheck(command, message, this.lib);
+      if (req === null) return this.storeMessage(message);
+      if (!req) return () => {
+        this.send(message.channel.id, command.invalidPermission);
+        this.storeMessage(message);
+      };
+      command.run(this, message, args);
+      this.storeMessage(message);
     });
-    this._client.connect();
+    switch (this.lib) {
+      case "eris":
+        this._client.connect();
+        break;
+      case "discord.js":
+        this._client.login(this.token);
+        break;
+    }
   }
   exit(options) {
-    this._client.disconnect(options || null);
+    switch (this.lib) {
+      case "eris":
+        this._client.disconnect(options || null);
+        break;
+      case "discord.js":
+        process.exit();
+    }
   }
   register(commandPath, eventPath) {
     this.Registry = new Registry(commandPath, eventPath);
@@ -378,11 +416,24 @@ class Client {
   getPrefix() {
     return this.commandOptions.prefix.join("\", \"");
   }
-  dm(userid, message) {
-    this._client.getDMChannel(userid).then(msg => msg.createMessage(message));
+  dm(userid, message, additional) {
+    switch (this.lib) {
+      case "eris":
+        this._client.getDMChannel(userid).then(msg => msg.createMessage(message));
+      break;
+      case "discord.js":
+        this._client.users.get(userid).send(message, additional);
+      break;
+    }
   }
-  send(channel, message) {
-    this._client.createMessage(channel, message);
+  send(channel, message, additional) {
+    switch (this.lib) {
+      case "eris":
+        this._client.createMessage(channel, message);
+        break;
+      case "discord.js":
+        this._client.channels.get(channel).send(message, additional);
+    }
   }
   handleEvents(item) {
     if (!Array.isArray(item)) throw new TypeError("item must be an array");
@@ -403,6 +454,11 @@ class Client {
       if (pref.includes(" ")) throw new Error("prefix may not include spaces");
     });
     this.commandOptions.prefix = prefix;
+  }
+  storeMessage(message) {
+    if (!this.messages[message.channel.id]) this.messages[message.channel.id] = [];
+    if (this.messages[message.channel.id].length >= this.commandOptions.messageLimit) this.messages[message.channel.id].pop();
+    this.messages[message.channel.id].unshift(message);
   }
 }
 

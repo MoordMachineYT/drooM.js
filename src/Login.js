@@ -1,3 +1,12 @@
-const eris = require("eris");
+var mod;
 
-module.exports = eris;
+function login(lib, opt, tok) {
+  mod = require(lib);
+  if (lib === "discord.js") {
+    return new mod.Client(opt);
+  } else if (lib === "eris") {
+    return new mod(tok, opt);
+  }
+}
+
+module.exports = login;
