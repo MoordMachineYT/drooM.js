@@ -39,7 +39,7 @@ function ping(droom, message, args) {
 module.exports.run = ping;
 module.exports.path = __dirname + "/ping.js";`.
 
-Simply add between the curly brackets: `message.channel.createMessage("Pong!");`.
+Simply add between the curly brackets: `droom.send(message.channel.id, "Pong!");`.
 
 This will work after you restart the bot.
 
