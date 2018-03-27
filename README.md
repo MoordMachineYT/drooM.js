@@ -42,7 +42,7 @@ This will create a new file called "**ping.js**". The content of this file will 
 <br>
 `const drooM = require("droom.js");`<br>
 `function ping(droom, message, args) {`<br>
-`  const client = drooM._client;`<br>
+`  const client = droom._client;`<br>
 `}`<br>
 `module.exports.run = ping;`<br>
 `module.exports.path = __dirname + "/ping.js";`.
