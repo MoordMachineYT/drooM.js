@@ -40,11 +40,11 @@ Let's make a ping pong command to show you how this works. `client.addCommand("p
 <br>
 This will create a new file called "**ping.js**". The content of this file will look like this:
 <br>
-`const drooM = require("droom.js");
-function ping(droom, message, args) {
-  const client = drooM._client;
-}
-module.exports.run = ping;
+`const drooM = require("droom.js");<bt>
+function ping(droom, message, args) {<br>
+  const client = drooM._client;<br>
+}<br>
+module.exports.run = ping;<br>
 module.exports.path = __dirname + "/ping.js";`.
 <br>
 Simply add between the curly brackets: `droom.send(message.channel.id, "Pong!");`.<br>
