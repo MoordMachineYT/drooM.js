@@ -6,7 +6,7 @@ This framework is created to make coding Discord bots go much faster and easier.
 
 # How to use this framework
 1. Install drooM.js by running `npm i droom.js`.
-2. Install either <a href="https://github.com/abalabahaha/eris">Eris</a> by using `npm i eris --no-optional` (remove `--no-optional` if you do not require voice support) or <a href="https://github.com/discordjs/discord.js">Discord.js</a> by using `npm i discord.js --save`.
+2. Install either <a href="https://github.com/abalabahaha/eris">Eris</a> by using `npm i eris --no-optional` (remove `--no-optional` if you need voice support) or <a href="https://github.com/discordjs/discord.js">Discord.js</a> by using `npm i discord.js --save`.
 <br><br>
 
 If you have both modules, the bot is going to use Eris by default, so make sure you uninstall the module you don't want to use.
