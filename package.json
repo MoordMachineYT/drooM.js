@@ -1,0 +1,15 @@
+{
+  "name": "droom.js",
+  "version": "0.0.0",
+  "description": "A high-end framework used for eris or discord.js.",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "discord.js": "^11.5.1",
+    "eris": "^0.10.1"
+  }
+}
